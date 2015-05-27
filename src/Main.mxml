@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" minWidth="800" minHeight="600" pageTitle="Gener@t0r" currentState="login">
+	<s:layout>
+		<s:BasicLayout/>
+	</s:layout>
+	
+	<fx:Script>
+		<![CDATA[
+			import flash.net.navigateToURL;
+			import flash.profiler.showRedrawRegions;
+			
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.events.CloseEvent;
+			import mx.events.FlexEvent;
+			import mx.events.ValidationResultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import spark.events.IndexChangeEvent;
+			
+			[Bindable] public var units:ArrayCollection = new ArrayCollection([
+				{label:"Kbps", data:0, value:"K"},
+				{label:"Mbps", data:1, value:"M"},
+				{label:"Gbps", data:2, value:"G"}]);
+			
+			[Bindable] public var Kbps:ArrayCollection = new ArrayCollection([
+				{label:"256"},{label:"512"},{label:"768"}]);
+			
+			[Bindable] public var Mbps:ArrayCollection = new ArrayCollection([
+				{label:"1"},{label:"1.5"},{label:"2"},{label:"3"},{label:"4"},{label:"6"},
+				{label:"7"},{label:"8"},{label:"9"},{label:"10"},{label:"15"},{label:"20"},
+				{label:"25"},{label:"30"},{label:"35"},{label:"40"},{label:"45"},{label:"50"},
+				{label:"55"},{label:"60"},{label:"65"},{label:"70"},{label:"75"},{label:"80"},
+				{label:"85"},{label:"90"},{label:"95"},{label:"100"},{label:"150"},{label:"200"},
+				{label:"250"},{label:"300"},{label:"350"},{label:"400"},{label:"450"},{label:"500"},
+				{label:"550"},{label:"600"},{label:"650"},{label:"700"},{label:"750"},{label:"800"},
+				{label:"850"},{label:"900"},{label:"950"}]);			
+			
+			[Bindable] public var Gbps:ArrayCollection = new ArrayCollection([
+				{label:"1"},{label:"1.5"},{label:"2.5"},{label:"3"},{label:"4"},
+				{label:"5"},{label:"6"},{label:"7"},{label:"8"},{label:"9"},{label:"10"}]);
+			
+			[Bindable] public var serviceClassName:ArrayCollection = new ArrayCollection([
+				{label:"Non-Critical-Low", classValue:0, value:"_No_CRITCL_Low_"},
+				{label:"Non-Critical-High", classValue:1, value:"_No_CRITCL_Hi_"},
+				{label:"Bus-Critical-Med", classValue:2, value:"_Bus_CRITCL_Med_"},
+				{label:"Bus-Critical-High", classValue:3, value:"_Bus_CRITCL_Hi_"},
+				{label:"Interactive", classValue:4, value:"_IntrActv_"},
+				{label:"RealTime", classValue:5, value:"_RT_"}]);
+			
+			[Bindable] public var serviceType:ArrayCollection = new ArrayCollection([
+				{label:"EPL"},
+				{label:"EVPL"},
+				{label:"VRF"},
+				{label:"ELAN"}]);
+			
+			[Bindable] public var networkPoint:ArrayCollection = new ArrayCollection([
+				{label:"L2", value:"set-cos"},
+				{label:"MPLS", value:"set-mpls-exp-imposition-transmit"}]);
+			
+			private function handleUnitsSelected(event:IndexChangeEvent):void
+			{
+				//speedList.selectedIndex = -1;
+				if (unitDropDown.selectedIndex == 0)
+					speedDropDown.dataProvider = Kbps;
+				else if (unitDropDown.selectedIndex == 1)
+					speedDropDown.dataProvider = Mbps;
+				else if (unitDropDown.selectedIndex == 2)
+					speedDropDown.dataProvider = Gbps;
+			}
+			private function dropValidater():void
+			{
+				if(serviceTypeDropDown.selectedItem !== null){
+					generateBtn.enabled = true;
+				}
+				else if(speedDropDown.selectedItem !== null){
+					generateBtn.enabled = true;
+				}
+				else if(classDropDown.selectedItem !== null){
+					generateBtn.enabled = true;
+				}
+				else if(networkPointDropDown.selectedItem !== null){
+					generateBtn.enabled = true;
+				}
+			}
+			private function generateCode():void
+			{
+				cpyBtn.visible = true;
+				cpytext.visible = true;	
+				cpytext.text = "Copy code below:"
+				
+				// EPL selected
+				if(serviceTypeDropDown.selectedItem.label == "EPL")
+					outputCode.text = "policy-map " + speedDropDown.selectedItem.label + unitDropDown.selectedItem.value + classDropDown.selectedItem.value + "IN\n" +	"class class-default\n" + 
+						"police " + speedDropDown.selectedItem.label + " " + unitDropDown.selectedItem.value.toString().toLocaleLowerCase() + " conform-action " + 
+						networkPointDropDown.selectedItem.value + " " + classDropDown.selectedItem.classValue + " exceed-action drop violate-action drop";
+				
+				// EVPL selected
+				if(serviceTypeDropDown.selectedItem.label == "EVPL")
+					outputCode.text = "policy-map " + speedDropDown.selectedItem.label + unitDropDown.selectedItem.value + classDropDown.selectedItem.value + "IN\n" +	"class class-default\n" + 
+						"police " + speedDropDown.selectedItem.label + " " + unitDropDown.selectedItem.value.toString().toLocaleLowerCase() + " conform-action " + 
+						networkPointDropDown.selectedItem.value + " " + classDropDown.selectedItem.classValue + " exceed-action drop violate-action drop";
+				
+				// VRF selected
+				if(serviceTypeDropDown.selectedItem.label == "VRF")
+					outputCode.text = "policy-map " + speedDropDown.selectedItem.label + unitDropDown.selectedItem.value + classDropDown.selectedItem.value + "OUT\n" +	"class class-default\n" + 
+						"police " + speedDropDown.selectedItem.label + " " + unitDropDown.selectedItem.value.toString().toLocaleLowerCase() + " conform-action " + 
+						networkPointDropDown.selectedItem.value + " " + classDropDown.selectedItem.classValue + " exceed-action drop violate-action drop";
+				
+				// ELAN selected
+				if(serviceTypeDropDown.selectedItem.label == "ELAN")
+					outputCode.text = "policy-map " + speedDropDown.selectedItem.label + unitDropDown.selectedItem.value + classDropDown.selectedItem.value + "OUT\n" +	"class class-default\n" + 
+						"police " + speedDropDown.selectedItem.label + " " + unitDropDown.selectedItem.value.toString().toLocaleLowerCase() + " conform-action " + 
+						networkPointDropDown.selectedItem.value + " " + classDropDown.selectedItem.classValue + " exceed-action drop violate-action drop";
+			}
+			private function email():void
+			{
+				var emailRequest:URLRequest = new URLRequest("mailto:jcruz@centennialpr.com?subject=From Policy QoS Generator Tool");
+				navigateToURL(emailRequest, "_self");
+			}						
+			private function login():void
+			{
+				login_user.send();
+			}			
+			private function checkLogin(event:ResultEvent):void
+			{
+				if(event.result.loginsuccess == "yes")		
+				{
+					clearFld();
+					if(event.result.group == "0")
+					{
+						currentState = 'Admin';
+						panel1.title = "Hello, " + event.result.fullname.toString().toUpperCase();
+					}
+					if(event.result.group == "1")
+					{
+						currentState = 'Sales';
+						panel1.title = "Hello, " + event.result.fullname.toString().toUpperCase();
+					}
+					if(event.result.group == "2")
+					{
+						currentState = 'Tech';
+						panel1.title = "Hello, " + event.result.fullname.toString().toUpperCase();
+					}
+				}				
+				if(event.result.loginsuccess == "no")					
+				{
+					Alert.show("Invalid username/password", "Error");
+					clearFld();
+				}		
+			}
+			private function sendMail():void
+			{
+				var emailRequest:URLRequest = new URLRequest("mailto:jcruz@centennialpr.com?subject=Requesting access to the webtool");
+				navigateToURL(emailRequest, "_self"); 
+			}
+			private function clearFld():void
+			{
+				username.text = "";
+				password.text = "";
+			}
+			private function exitApp(event:Event):void 
+			{
+				Alert.show("Do you want to exit?", "Exit Application",Alert.YES|Alert.NO, this, alertClickHandler);
+			}			
+			private function alertClickHandler(event:CloseEvent):void
+			{
+				if(event.detail==Alert.YES)
+				{
+					var resetWeb:URLRequest = new URLRequest("file:///Users/jcruz/Documents/Adobe%20Flash%20Builder%204/Policy%20QOS%20Generator/bin-debug/Main.html");
+					navigateToURL(resetWeb, "_parent");
+				}
+			}
+			private function CopyToClipboard():void
+			{
+				System.setClipboard(outputCode.text);
+				cpytext.text = "Text copied!";
+			}
+
+		]]>
+	</fx:Script>
+	
+	<s:states>
+		<s:State name="login"/>
+		<s:State name="Sales"/>
+		<s:State name="Tech"/>
+		<s:State name="Admin"/>
+	</s:states>
+	
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+		
+		<mx:HTTPService	id="login_user" result="checkLogin(event)" method="POST" url="http://207.166.123.100/php/login.php"	useProxy="false" showBusyCursor="true">
+			<mx:request xmlns="">
+				<username>{username.text}</username>
+				<password>{password.text}</password>
+			</mx:request>
+		</mx:HTTPService>
+		
+	</fx:Declarations>
+	
+	<s:Panel width="252" height="158" id="panel1" horizontalCenter="0" title.login="Login" width.Sales="800" height.Sales="600" horizontalCenter.Sales="0" y.Sales="5" y.login="5" height.Tech="600" horizontalCenter.Tech="0" width.Tech="848" y.Tech="5" height.Admin="600" horizontalCenter.Admin="0" width.Admin="800" y.Admin="5">
+		<s:Label x="45" y="32" text="Username:" includeIn="login"/>
+		<s:Label x="47" y="61" text="Password:" includeIn="login"/>
+		<s:TextInput id="username" x="99" y="28" toolTip="Enter username" includeIn="login"/>
+		<s:TextInput id="password" x="99" y="56" toolTip="Enter password" displayAsPassword="true" includeIn="login"/>
+		<s:Label x="10" y="10" text="Please enter your username and password to enter." includeIn="login"/>
+		<s:Button x="162" y="90" label="Login" id="loginBtn" click="login()" includeIn="login"/>
+		<mx:LinkButton x="47" y="90.55" label="Need access?" id="needAccessBtn" includeIn="login" click="sendMail()"/>
+		<mx:LinkButton includeIn="Admin,Sales,Tech" y="-28" label="Exit" color="#FFFFFF" fontWeight="bold" right="7" click="exitApp(event)"/>
+		<mx:TabNavigator id="tabNav" tabOffset="10" includeIn="Admin,Sales,Tech" right="5" left="5" top="5" bottom="5" fontSize="14">
+			<s:NavigatorContent label="Welcome" width="100%" height="100%">
+				<s:Label x="210" y="10" text="Welcome to the QoS MPLS Generator tool." includeIn="Admin,Tech" x.Tech="284" y.Tech="10"/>
+				<s:Label includeIn="Tech" x="10" y="64" text="This tool will help the user to generate the policies needed for the cisco router configuration in a more fashion and easy way.&#xd;"/>
+			</s:NavigatorContent>
+			<s:NavigatorContent width="100%" height="100%" label="Enter Order Information" label.Tech="QoS Generator" label.Admin="Admin Window">
+				<s:Label includeIn="Sales" x="7" y="54.95" text="Costumer Name:"/>
+				<s:TextInput includeIn="Sales" x="124" y="48.9" id="custName" toolTip="Enter Costumer Name"/>
+				<s:Label includeIn="Sales" x="10" y="10" text="Please enter and select the service order values."/>
+				<mx:HRule includeIn="Sales" x="10" y="31" width="768"/>
+				<s:DropDownList includeIn="Sales" x="124" y="78.45" width="146"></s:DropDownList>
+				<s:Label x="28" y="84.9" text="Service Type:" includeIn="Sales"/>
+				<s:RichEditableText x="292" y="14" text="Policy QoS Generator" fontSize="18" fontWeight="bold" includeIn="Tech"/>
+				<s:Label x="272" y="154" text="Select your configuration from menu below:" includeIn="Tech"/>
+				<mx:HRule x="10" y="174" width="816" includeIn="Tech"/>
+				<s:DropDownList x="40" y="219" id="speedDropDown" prompt="Select Speed" textAlign="center" dataProvider="{Mbps}" includeIn="Tech" width="135"/>
+				<s:DropDownList x="186" y="219" id="unitDropDown" prompt="Select Unit" textAlign="center" dataProvider="{units}" labelField="label" change="handleUnitsSelected(event)" requireSelection="true" selectedIndex="1" includeIn="Tech"/>
+				<s:DropDownList x="309" y="219" id="classDropDown" prompt="Select Class Name" width="175" textAlign="center" dataProvider="{serviceClassName}" labelField="label" includeIn="Tech"/>
+				<s:DropDownList x="645" y="219" id="networkPointDropDown" prompt="Network Point" textAlign="center" width="152" dataProvider="{networkPoint}" labelField="label" includeIn="Tech"/>
+				<s:DropDownList x="493" y="219" id="serviceTypeDropDown" prompt="Service Type" textAlign="center" dataProvider="{serviceType}" labelField="label" includeIn="Tech" width="137" change="dropValidater()"/>
+				<s:Button x="747" y="292" label="Generate" id="generateBtn" click="generateCode();" includeIn="Tech" enabled="false"/>
+				<s:RadioButton x="130" y="185.5" label="Cisco" groupName="radioSelection" selected="true" includeIn="Tech"/>
+				<s:RadioButton x="190" y="185.5" label="Telco" groupName="radioSelection" enabled="false" includeIn="Tech" toolTip="Selection disabled, options are not programmed yet."/>
+				<s:Label x="6" y="186.5" text="Select Device first:" includeIn="Tech"/>
+				<mx:LinkButton x="594" y="492" label="Juan N. De La Cruz-Bueno" id="emailLink" click="email()" toolTip="Send Email" textAlign="left" fontWeight="bold" buttonMode="true" includeIn="Tech"/>
+				<s:TextArea x="10" y="318" width="816" height="138" id="outputCode" editable="false" fontSize="14" color="#000000" includeIn="Tech"/>
+				<s:Label x="600" y="478" text="tool developed by:" fontSize="11" includeIn="Tech"/>
+				<mx:HRule x="10" y="48" width="816" includeIn="Tech"/>
+				<s:Label x="10" y="301" text="Copy code below:" id="cpytext" visible="false" includeIn="Tech"/>
+				<s:Button x="744" y="457" label="Copy text" id="cpyBtn" visible="false" buttonMode="true" click="CopyToClipboard()" includeIn="Tech"/>
+				<s:RichText x="9" y="63" text="&#xd;1. Select from the dropdown list the configuration needed.&#xd;2. Click on the Generate Code button.&#xd;3. Must copy code generated using the COPY button only." fontWeight="bold" color="#D9684D" includeIn="Tech" fontSize="12" fontFamily="Arial"/>
+				<s:RichText x="10" y="464" height="56" text="If you encounter any problem with the application send us an email with a brief decription. Also if you have any input to improve this tool it will be very welcome. " color="#D9684D" includeIn="Tech" fontSize="12" fontFamily="Arial" width="322"/>
+			</s:NavigatorContent>
+		</mx:TabNavigator>
+	</s:Panel>
+</s:Application>
